@@ -1,5 +1,5 @@
 # Genetic-models
-implementation algorithms genetic dataset
+implementation algorithms on genetic dataset
 about the dataset : 36=n of sampling that are composed from 1000=m sites , 1..,17 samples are from Colon tissue, and 18,..,36 samples are from Lung tissue.
 Our goal is to identify sites with different Methylation between the types of tissue.
 Steps : First implementation of statistical test (hypothesis, pvalues and ect.), Second try to find pattern of the pvalues and ect, Third implementation of algorithms: 
