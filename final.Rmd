@@ -1,7 +1,6 @@
 ---
-title: "final work"
 output: html_document
-author: "Yotam braun 309914646"
+author: "Yotam braun"
 ---
 
 ```{r setup, include=FALSE}
