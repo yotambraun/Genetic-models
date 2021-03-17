@@ -1,0 +1,373 @@
+---
+title: "final work"
+output: html_document
+author: "Yotam braun 309914646"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+#load the data from file
+load("C:/R/advenced statistical/ex/meth_dat.rda")
+
+```
+
+##a
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+library(dplyr)
+library(stats)
+library(MASS)
+df = as.data.frame(meth_dat)
+#Performs t-tests on vectors of data
+t_test = function(y,k){
+  #y vector of samples that we test on 
+  #d is the index that is cut the sample to two samples
+  n=length(y)
+  part_1=y[1:k]
+  part_2=y[-c(1:k)]
+  return((mean(part_1)-mean(part_2))/sqrt((var(part_1)/k)+(var(part_2)/(n-k))))}
+
+  
+
+
+
+
+#According to Wikipedia:
+#In statistical hypothesis testing, the p-value or probability value or asymptotic #significance is the probability for a given statistical model that, when the null #hypothesis is true, the statistical summary (such as the sample mean difference #between two compared groups) would be more extreme than the actual observed results
+play_t_test=apply(df,2,function(x) t_test(x,17) )
+
+#for(i in 1:ncol(df)){
+ # t_test_i[i] = t.test(df[1:17,i],df[18:36,i], alternative = "two.sided")$statistic
+  #}
+
+pvalue=pt(-abs(play_t_test),34)
+  #we take 0.05 because its from the alpha=0.1 and we do two side test so we divded by 2 (from two sides)
+
+
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+plot((1:1000),pvalue,cex=0.3,col="red",ylab = "Pvalues",xlab="number",main = "Pvalue")
+lines(density(pvalue),col="blue",lwd=3)
+```
+
+##b
+###p-values at low p-values
+###That peak close to 0 
+###Not uniform distribution
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+#make histogram of p values
+real<-hist(x =pvalue)
+lines(density(pvalue),col="blue",lwd=3)
+
+n<-100000
+uniVals <- runif(n, 0, 1)
+un<-hist(uniVals)
+
+plot(real,col=rgb(0,0,1,1/4))
+plot(un,add=TRUE,col=rgb(1,0,0,1/8),xlab = "Pvalues",main = "compare the pvalues distribution to uniform distribution")
+lines(density(pvalue),col="blue",lwd=3)
+```
+
+#c
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+holm_diffcedure = function(p_value,alpha){
+  #First of all in holm diffcedure we need to sort the vector of pvalue in ascending order
+  ascen_order = sort(p_value)
+  size_vector = length(ascen_order)
+  
+  #The smallest pvalue
+  index = 0
+  #By the formula
+  while(ascen_order[index+1]<= alpha/(size_vector-index) && index<size_vector){
+    index = index+1
+    
+  }
+  #we want to take_min_purn the index of the bound we need to check the index if the  pvalue is the rejection index we stop and take_min_purn the index of the pvalue  the h0 we continue
+  if(index ==0){
+    return(0)
+  }
+  else{
+    
+    #take_min_purn the pvalues in the ascending oreder by the rejection of holm diffcedure
+    return(ascen_order[index])
+  }
+  
+    
+ 
+}
+
+```
+
+##BH <-- for a given α and a given sequence of ordered p-values
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+BH_diffcedure = function(p_value,q){
+  #  For a desired false discovery rate threshold q
+  #First of all in BH diffcedure we need to sort the vector of pvalue in ascending order generted form n hypotesis tests
+  ascen_order = sort(p_value)
+  size_vector = length(ascen_order)
+  
+  #q = P(i) / (i / m)
+  index = size_vector
+  #By the formula
+  #We need to find the biggest index that for him we will reject all the hypotesis until that point that we find is the max of tejection
+  while(ascen_order[index]> (q*index)/(size_vector) && index>=1){
+    #reduce the index if the term happen
+    index = index-1
+    
+  }
+  #Stop and take_min_purn the the index that get the bound
+  
+    if(index>0){
+     
+      return(ascen_order[index])
+    }
+    
+    else{return(0)}
+  
+    
+ 
+}
+
+
+```
+
+###Westfall-Young Procedure
+###estimate p-values without the need for making many theoretical assumptions 
+### The Westfall and Young permutation is to compute the p-value estimation:       1) P-values are calculated for each gene based on the original data set.           2) The permutation method creates a some data set by dividing the                  3) P-values for all genes are computed on the some data set.                        4)the min new p-values are retained and compared to the original ones.             5) This process is repeated a large number of times, and the proportion of resampled data sets where the minimum of the p-value for the new genrete data is less than  the original p-value is the the correct p-value
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+
+#westfall and young min p 
+##Performs t-tests on vectors of data with gut on rows 1:17,lung on rows 18:36
+p_value_westfall <- function(data){
+  
+  s_t=apply(data,2,function(x) t_test(x,17) )
+  #cacluate the p_values of the t_test for the lung and the gut
+  p_values <-  pt(-abs(s_t), 34)
+  return(p_values)
+}
+#ff=p_value_westfall(df)
+
+#keep the p_value_westfall that caculate the pvalues that in the form of WY instructions
+#make the data random pick from the rows because the hypo on the rows
+sample_func <- function(data){
+  #keep the seed after itearions
+  rows <- data[sample(nrow(data)),]
+  return(rows)
+}
+df_keep = data.frame((rep(1:1000)))
+main_func_WY = function(data,pval,B,alpha){
+  p_vale_from_out=p_value_westfall(data)
+  for(i in 1:B){
+    mix_data = sample_func(data)
+    pvalue_WY_mix = p_value_westfall(mix_data)
+    df_keep[,i] =pvalue_WY_mix
+    
+    
+  
+  }
+  
+  for(j in 1:1000){
+    pvalue_min = min(p_vale_from_out)
+    pvalue_min_index = which.min(p_vale_from_out)
+    take_min = apply(X = df_keep,FUN = min,MARGIN = 2)
+    if(mean(take_min<pvalue_min)<alpha){
+      p_vale_from_out[pvalue_min_index] =2
+      df_keep[pvalue_min_index,] =2
+    }
+    else{
+      return(1001-j)
+    }
+    
+  }
+  return(0)
+
+}
+#a=main_func_WY(df,p_value_WY,2,0.1)
+
+
+
+
+
+```
+
+
+##d
+##Estimate models on bootstrapped data
+##Bootstrapping is a highly flexible re-sampling procedure that can be used to estimate the sampling distribution of any statistic
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+alpha =0.1
+compl_alpha = 1-alpha
+#make estimte cov with regularization from the formula from week 6
+
+cov_pop_gut <- (compl_alpha)*var(df[1:17,])+alpha*diag(diag(var(df[1:17,])))
+cov_pop_Lung <- (compl_alpha)*var(df[18:36,])+alpha*diag(diag(var(df[18:36,])))
+#initialize the pvalues vectors and the sites counting rejecting
+p_value_holm_boot <- c()
+p_value_BH_boot <- c()
+p_value_boot_WY <- c()
+
+
+# sites_holm = c(rep(0,30))
+# sites_BH = c(rep(0,30))
+# sites_WY = c(rep(0,30))
+#site_5_lower = c(rep(0,5))
+#Bootstrapping is a statistical technique which consists in generating samples of size B
+for (i in 1:400) {
+  #take data from mvrnorm one data is from pop_gut and the other from pop_Lung
+  #bind the data for compute the t_test
+  sample_normal_pop_gut<-mvrnorm(n = 19, rep(0,1000), cov_pop_gut)
+  sample_normal_pop_Lung<-mvrnorm(n = 17, rep(0,1000), cov_pop_Lung)
+  bind_samples_gut_lung<- rbind(sample_normal_pop_Lung,sample_normal_pop_gut)
+  
+  s_t=apply(bind_samples_gut_lung,2,function(x) t_test(x,17) )
+  #compute p_value for the t_test from the normal sample
+  pval_select_from_pop <-pt(-abs(s_t), 34)
+  keep_pval_select_pop <-pval_select_from_pop
+  #pvalue for HOLM by the normal data
+  p_value_holm_boot[i] <- holm_diffcedure(keep_pval_select_pop,alpha = alpha)
+  #pvalue for BH by the normal data
+  p_value_BH_boot[i]<- BH_diffcedure(keep_pval_select_pop,q = alpha)
+  #pvalue for WY by the normal data
+  p_value_boot_WY[i] <- main_func_WY(bind_samples_gut_lung,keep_pval_select_pop,100,alpha = alpha)
+  #How many  p-values smaller than 0.1 and rejected
+  # if(p_value_holm_boot[i]<alpha){
+  #   sites_holm[i] = 1
+  # }
+  #  if(p_value_BH_boot[i]<alpha){
+  #   sites_BH[i] = 1
+  #  }
+  # if(p_value_boot[i]<alpha){
+  #   sites_WY[i] = 1
+  # }
+  
+  
+}
+#sites_holm = ifelse(p_value_holm_boot<alpha,1,0)
+#sites_BH = ifelse(p_value_BH_boot<alpha,1,0)
+#sites_WY = ifelse(p_value_boot<alpha,1,0)
+
+#family-wise error rate = FWER P(V > 0) <-- probability of at least one type I error
+#Holm control FWER
+holm_FWER <- mean(p_value_holm_boot>0)
+
+#Benjamini-Hochberg doesnt control FWER
+BH_FWER <- mean(p_value_BH_boot>0)
+WY_FWER <- mean(p_value_boot_WY>0)
+#The mean of a proportion is p, then the variance is p(1−p). The standard deviation is then the square root
+sd_Holm = sqrt(holm_FWER*(1- holm_FWER)/length(p_value_holm_boot))
+#The formula of condifence interval of proporion is p+- z(1-alpha/2)*sd/n
+#Computes the confidence interval
+confi_holm_lower = holm_FWER- qnorm(1- alpha/2)*sd_Holm
+confi_holm_up = holm_FWER+ qnorm(1- alpha/2)*sd_Holm
+#combinded the confidence bound
+conf_interval_holm =c(confi_holm_lower,confi_holm_up)
+
+#The mean of a proportion is p, then the variance is p(1−p). The standard deviation is then the square root
+sd_BH = sqrt(BH_FWER*(1- BH_FWER)/length(p_value_BH_boot))
+#The formula of condifence interval of proporion is p+- z(1-alpha/2)*sd/n
+#Computes the confidence interval
+confi_BH_lower = BH_FWER- qnorm(1- alpha/2)*sd_BH
+confi_BH_up = BH_FWER+ qnorm(1- alpha/2)*sd_BH
+#combinded the confidence bound
+conf_interval_BH =c(confi_BH_lower,confi_BH_up)
+
+sd_WY = sqrt(WY_FWER*(1- WY_FWER)/length(p_value_boot_WY))
+confi_WY_lower = WY_FWER- qnorm(1- alpha/2)*sd_WY
+confi_WY_up = WY_FWER+ qnorm(1- alpha/2)*sd_WY
+#combinded the confidence bound
+conf_interval_WY =c(confi_WY_lower,confi_WY_up)
+
+
+method = c("HOLM","BH","WY")
+
+condi_interval_methods = data.frame(type_method = method,lower_bound =c(confi_holm_lower,confi_BH_lower,confi_WY_lower),upper_bound = c(confi_holm_up,confi_BH_up,confi_WY_up))
+
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+#print(condi_interval_methods)
+#data frame of cofidence interval of FWER
+condi_interval_methods
+```
+##E
+##Check the amount of the rejection for each method
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+p_value_holm <- holm_diffcedure(pvalue,alpha = alpha)
+  #pvalue for BH by the normal data
+p_value_BH<- BH_diffcedure(pvalue,q = alpha)
+  #pvalue for WY by the normal data
+p_value_WY <- main_func_WY(df,pvalue,100,alpha = alpha)
+
+sites_holm=sum(p_value_holm>pvalue)
+sites_BH =sum(p_value_BH>pvalue)
+sites_WY =sum(p_value_WY>pvalue)
+
+total_reject_holm = sites_holm
+total_reject_BH = sites_BH
+total_reject_WY = sites_WY
+
+total_reject = data.frame(type_method = method,Total_reject =c(total_reject_holm,total_reject_BH,total_reject_WY))
+total_reject
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+barplot(c("HOLM"=total_reject_holm,"BH" = total_reject_BH,"WY"=total_reject_WY),col=c(1,2,3),main = "Total Reject Site At Each Method")
+abline(h=mean(c(total_reject_holm,total_reject_BH,total_reject_WY)),col =7,lwd=3)
+
+```
+
+##F
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+#a false coverage rate (FCR) is the average rate of false coverage. not covering the true parameters, among the selected intervals
+set.seed(404040)
+which_min_sort = sort(na.omit(pvalue))
+sites_reje <-which(which_min_sort>0)
+keep_site =which_min_sort[sites_reje]
+keep_5 =keep_site[1:5] 
+mean_colon  =colMeans(df[1:17,sites_reje[1:5]])
+mean_LUNG = colMeans(df[18:36,sites_reje[1:5]])
+estimator = as.numeric(mean_colon-mean_LUNG)
+#t_val = rnorm(len_teta,mean = estimator,sd=sqrt(var(estimator)))
+
+var_colon<-apply(X = df[1:17,sites_reje[1:5]],FUN = var,MARGIN = 2)
+var_Lung <-apply(X = df[18:36,sites_reje[1:5]],FUN = var,MARGIN = 2)
+
+var_together <- (18*var_Lung+16*var_colon)/(34)
+sd_together = sqrt((var_together/19)+(var_together/17))
+
+
+confi_lower = estimator- qnorm((5/1000)*0.1)*sd_together
+confi_up = estimator+ qnorm( (5/1000)*0.1)*sd_together
+Confidence_interval= data.frame("pvalue j" =c(keep_5),"Confidence interval lower"=c(confi_lower),"Confidence interval upper"=c(confi_up))
+rownames(Confidence_interval) =  1:5
+
+Confidence_interval
+
+
+
+ 
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+which_are_not_in = which(!(estimator > as.numeric(confi_up)) | !(estimator<as.numeric(confi_lower)))
+FCR_smallest_5 = mean(is.element(estimator,which_are_not_in))
+print(sprintf("FCR for smallest 5: %.2f ",FCR_smallest_5))
+
+
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+plot(1:5,as.numeric(estimator),ylim = c(-0.1,0.1),pch = 20,cex =2,main = "Confidence interval for the 5 smallest pvalue for the estimator",xlab = "Number",ylab = "Pvalue")
+abline(h=0)
+points(1:5,qt(1-0.05/2,34)*sd_together,col=4,pch =3)
+for(i in 1:5){
+  lines(c(i,i),c(as.numeric(confi_lower)[i],as.numeric(confi_up)[i]),col=2,lwd=2)
+}
+
+ 
+```
+
